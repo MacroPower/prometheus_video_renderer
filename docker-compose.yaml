@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.27.0
+    ports:
+      - 9090:9090
+    volumes:
+      - ./data:/prometheus
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=20y'
+      - '--query.lookback-delta=5s'
