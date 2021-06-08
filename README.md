@@ -1,6 +1,6 @@
 # prometheus_video_renderer
 
-Plays videos using [Prometheus](https://prometheus.io/) and [Grafana](grafana.com/), e.g. [Bad Apple](https://www.youtube.com/watch?v=ApJxFprSTqA).
+Plays videos using [Prometheus](https://prometheus.io/) and [Grafana](https://grafana.com/), e.g. [Bad Apple](https://www.youtube.com/watch?v=ApJxFprSTqA).
 
 ![grafana](docs/img/rgb_grafana.png)
 
@@ -31,6 +31,12 @@ The RGB mode creates offset metrics for red, green, and blue, and sets a brightn
 This is 22-bit color, made with 640 unique overrides.
 
 Example: https://www.youtube.com/watch?v=aLvh0oId3Go
+
+## Audio
+
+You can store and stream WAVs using prometheus_jukebox.
+
+Example: https://www.youtube.com/watch?v=psk20qGVF10
 
 ## Inspiration
 
