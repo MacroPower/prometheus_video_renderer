@@ -12,6 +12,8 @@ import (
 	"path"
 	"path/filepath"
 	"time"
+
+	"github.com/MacroPower/prometheus_video_renderer/pkg/backfiller"
 )
 
 type writeFunc func(b *bytes.Buffer, img image.Image, timestamp time.Time, x int, y int, invY int, sliceSize int)
@@ -52,7 +54,7 @@ func writeBitmap(b *bytes.Buffer, img image.Image, timestamp time.Time, x, y, in
 		for i := 0; i < sliceSize; i += *scrapeInterval {
 			sampleTs := timestamp.Add(time.Duration(i) * time.Second).Unix()
 			if b.Len() == 0 {
-				b.WriteString(help(*projectName))
+				b.WriteString(backfiller.Help(*projectName))
 			}
 			b.WriteString(fmt.Sprintf(`%s{y="%d"} %d %d%s`, *projectName, y, invY, sampleTs, "\n"))
 		}
@@ -64,7 +66,7 @@ func writeGrayscale(b *bytes.Buffer, img image.Image, timestamp time.Time, x, y,
 	for i := 0; i < sliceSize; i += *scrapeInterval {
 		sampleTs := timestamp.Add(time.Duration(i) * time.Second).Unix()
 		if b.Len() == 0 {
-			b.WriteString(help(*projectName))
+			b.WriteString(backfiller.Help(*projectName))
 		}
 		b.WriteString(fmt.Sprintf(`r{y="%d",l="%d"} %d %d%s`, y, c.Y, invY-0, sampleTs, "\n"))
 	}
@@ -76,18 +78,14 @@ func writeRGB(b *bytes.Buffer, img image.Image, timestamp time.Time, x, y, invY,
 	for i := 0; i < sliceSize; i += *scrapeInterval {
 		sampleTs := timestamp.Add(time.Duration(i) * time.Second).Unix()
 		if b.Len() == 0 {
-			b.WriteString(help("r"))
-			b.WriteString(help("g"))
-			b.WriteString(help("b"))
+			b.WriteString(backfiller.Help("r"))
+			b.WriteString(backfiller.Help("g"))
+			b.WriteString(backfiller.Help("b"))
 		}
 		b.WriteString(fmt.Sprintf(`r{y="%d",l="%d"} %d %d%s`, y, c.R>>0, invY-0, sampleTs, "\n"))
 		b.WriteString(fmt.Sprintf(`g{y="%d",l="%d"} %d %d%s`, y, c.G>>0, invY-1, sampleTs, "\n"))
 		b.WriteString(fmt.Sprintf(`b{y="%d",l="%d"} %d %d%s`, y, c.B>>1, invY-2, sampleTs, "\n"))
 	}
-}
-
-func help(metric string) string {
-	return fmt.Sprintf("# HELP %s The metric.\n# TYPE %s gauge\n", metric, metric)
 }
 
 func main() {
