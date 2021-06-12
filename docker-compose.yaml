@@ -20,7 +20,7 @@ services:
       - prometheus-video-renderer
 
   grafana:
-    image: grafana/grafana:7.5.6
+    image: grafana/grafana:8.0.1
     ports:
       - 3000:3000
     volumes:
@@ -32,12 +32,15 @@ services:
       GF_RENDERING_SERVER_URL: http://renderer:8081/render
       GF_RENDERING_CALLBACK_URL: http://grafana:3000/
       GF_LOG_FILTERS: rendering:debug
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
     networks:
       - prometheus-video-renderer
 
   renderer:
-    image: grafana/grafana-image-renderer:2.1.1
+    image: grafana/grafana-image-renderer:3.0.1
     ports:
       - 8081:8081
+    environment:
+      RENDERING_DUMPIO: 'true'
     networks:
       - prometheus-video-renderer
