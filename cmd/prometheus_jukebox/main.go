@@ -20,32 +20,94 @@ import (
 	"github.com/youpy/go-wav"
 )
 
-var (
-	trackName      = flag.String("name", "", "Name of the track")
-	filePath       = flag.String("file", "", "WAV file to source")
-	scrapeInterval = flag.Int("scrape-interval", 1, "Frequency at which samples are written")
-	mode           = flag.String("mode", "", "One of: [read, write]")
-	chunkSize      = flag.Duration("chunk-size", 2*time.Hour, "Amount of time to query at once")
-	startLoc       = flag.String("start-location", "", "Start location of the track (RFC3339)")
-)
+func addDefaultFlags(
+	f *flag.FlagSet,
+	trackName *string,
+	startTime *int64,
+) {
+	f.StringVar(trackName, "name", "", "Name of the track")
+	f.Int64Var(startTime, "start-time", 0, "The starting timestamp (Unix MS) of the track")
+}
 
 func main() {
-	flag.Parse()
+	var (
+		trackName string
+		startTime int64
 
-	st, err := time.Parse(time.RFC3339, *startLoc)
-	check(err)
+		recordCommand  = flag.NewFlagSet("record", flag.ExitOnError)
+		filePath       = recordCommand.String("file", "", "WAV file to source")
+		scrapeInterval = recordCommand.Int("scrape-interval", 1, "Frequency in seconds at which samples are written")
 
-	switch *mode {
-	case "read":
-		read(st)
-	case "write":
-		write(st)
+		playbackCommand = flag.NewFlagSet("playback", flag.ExitOnError)
+		prometheusURL   = playbackCommand.String("prometheus-url", "", "Prometheus URL")
+		chunkSize       = playbackCommand.Duration("chunk-size", 2*time.Hour, "Amount of time to query at once")
+	)
+
+	if len(os.Args) < 2 {
+		fmt.Println("record or playback subcommand is required")
+		os.Exit(1)
+	}
+
+	switch os.Args[1] {
+	case "record":
+		addDefaultFlags(
+			recordCommand,
+			&trackName, &startTime,
+		)
+		recordCommand.Parse(os.Args[2:])
+	case "playback":
+		addDefaultFlags(
+			playbackCommand,
+			&trackName, &startTime,
+		)
+		playbackCommand.Parse(os.Args[2:])
 	default:
-		panic("unsupported mode")
+		fmt.Println("record or playback subcommand is required")
+		os.Exit(1)
+	}
+
+	argErr := false
+	if trackName == "" {
+		fmt.Println("name is required")
+		argErr = true
+	}
+	if recordCommand.Parsed() {
+		if *filePath == "" {
+			fmt.Println("file is required")
+			argErr = true
+		}
+		if *scrapeInterval < 1 {
+			fmt.Println("scrape-interval must be 1 or greater")
+			argErr = true
+		}
+	}
+	if playbackCommand.Parsed() {
+		if *prometheusURL == "" {
+			fmt.Println("prometheus-url is required")
+			argErr = true
+		}
+		if *chunkSize < 1*time.Minute {
+			fmt.Println("chunk-size must be 1m0s or greater")
+			argErr = true
+		}
+	}
+	if argErr {
+		fmt.Println("Use --help for more information")
+		os.Exit(1)
+	}
+
+	startTimeMs := backfiller.FromUnixMs(startTime)
+
+	if recordCommand.Parsed() {
+		write(startTimeMs, trackName, *scrapeInterval, *filePath)
+	}
+
+	if playbackCommand.Parsed() {
+		read(startTimeMs, trackName, *scrapeInterval, *chunkSize, *prometheusURL)
 	}
 }
 
-func read(startTime time.Time) {
+func read(startTime time.Time, trackName string, scrapeInterval int, chunkSize time.Duration, prometheusURL string) {
 	sr := beep.SampleRate(44100)
 	speaker.Init(sr, sr.N(time.Second/10))
 
@@ -53,14 +115,14 @@ func read(startTime time.Time) {
 	done := make(chan bool)
 	speaker.Play(&queue)
 
-	client, err := prometheus.NewClient(prometheus.Config{Address: "http://localhost:9090"})
+	client, err := prometheus.NewClient(prometheus.Config{Address: prometheusURL})
 	check(err)
 
 	q := v1.NewAPI(client)
 
 	i := 0
 	for {
-		data, wavFormat, ok := getAudioChunk(q, startTime, i)
+		data, wavFormat, ok := getAudioChunk(q, startTime, trackName, scrapeInterval, chunkSize, i)
 		if !ok {
 			break
 		}
@@ -86,8 +148,8 @@ func read(startTime time.Time) {
 	<-done
 }
 
-func write(startTime time.Time) {
-	file, _ := os.Open(*filePath)
+func write(startTime time.Time, trackName string, scrapeInterval int, filePath string) {
+	file, _ := os.Open(filePath)
 
 	reader := wav.NewReader(file)
 	defer file.Close()
@@ -105,13 +167,13 @@ func write(startTime time.Time) {
 
 		for _, sample := range samples {
 			if b.Len() == 0 {
-				b.WriteString(backfiller.Help(*trackName))
+				b.WriteString(backfiller.Help(trackName))
 			}
 
 			b.WriteString(
 				fmt.Sprintf(
 					`%s{audio_format="%d",bits_per_sample="%d",block_align="%d",byte_rate="%d",sample_rate="%d"} %d %d%s`,
-					*trackName,
+					trackName,
 					format.AudioFormat,
 					format.BitsPerSample,
 					format.BlockAlign,
@@ -122,24 +184,35 @@ func write(startTime time.Time) {
 					"\n",
 				),
 			)
-			startTime = startTime.Add(time.Duration(*scrapeInterval) * time.Second)
+			startTime = startTime.Add(time.Duration(scrapeInterval) * time.Second)
 		}
 	}
 	b.WriteString("# EOF")
-	f, err := os.Create(*trackName)
+	f, err := os.Create(trackName)
 	check(err)
 	_, err = b.WriteTo(f)
 	check(err)
 }
 
-func getAudioChunk(q v1.API, startTime time.Time, n int) (samples []wav.Sample, format wav.WavFormat, ok bool) {
+func getAudioChunk(
+	q v1.API,
+	startTime time.Time,
+	trackName string,
+	scrapeInterval int,
+	chunkSize time.Duration,
+	n int,
+) (
+	samples []wav.Sample,
+	format wav.WavFormat,
+	ok bool,
+) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	value, _, err := q.QueryRange(ctx, *trackName, v1.Range{
-		Start: startTime.Add(*chunkSize * time.Duration(n+0)),
-		End:   startTime.Add(*chunkSize * time.Duration(n+1)),
-		Step:  time.Duration(*scrapeInterval) * time.Second * 1,
+	value, _, err := q.QueryRange(ctx, trackName, v1.Range{
+		Start: startTime.Add(chunkSize * time.Duration(n+0)),
+		End:   startTime.Add(chunkSize * time.Duration(n+1)),
+		Step:  time.Duration(scrapeInterval) * time.Second * 1,
 	})
 	check(err)
 	queryType := value.Type()
