@@ -26,14 +26,13 @@ var (
 	writeMode       = flag.String("mode", "bitmap", "One of: [bitmap, grayscale, rgb]")
 	lightThreshold  = flag.Int("bitmap-light-threshold", 127, "Brightness required to write a sample (1-255)")
 	scrapeInterval  = flag.Int("scrape-interval", 1, "The frequency at which new samples are written")
+	startTimeMs     = flag.Int64("start-time", 0, "The starting timestamp (Unix MS) of the render")
 	frameDuration   = flag.Duration(
 		"frame-duration",
 		5*time.Minute,
 		"The max duration that can be used to write samples."+
 			" Must be greater than the horizontal resolution times the scrape interval.",
 	)
-
-	startTime = time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	writeFuncs = map[string]writeFunc{
 		"bitmap":    writeBitmap,
@@ -90,6 +89,8 @@ func writeRGB(b *bytes.Buffer, img image.Image, timestamp time.Time, x, y, invY,
 
 func main() {
 	flag.Parse()
+
+	startTime := backfiller.FromUnixMs(*startTimeMs)
 
 	framesDir := filepath.Join(*framesLocation, *projectName)
 	metricsDir := filepath.Join(*metricsLocation, *projectName)
