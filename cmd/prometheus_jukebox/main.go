@@ -149,10 +149,14 @@ func read(startTime time.Time, trackName string, scrapeInterval int, chunkSize t
 }
 
 func write(startTime time.Time, trackName string, scrapeInterval int, filePath string) {
-	file, _ := os.Open(filePath)
+	file, err := os.Open(filePath)
+	check(err)
 
 	reader := wav.NewReader(file)
 	defer file.Close()
+
+	format, err := reader.Format()
+	check(err)
 
 	b := new(bytes.Buffer)
 	for {
@@ -162,32 +166,13 @@ func write(startTime time.Time, trackName string, scrapeInterval int, filePath s
 		}
 		check(err)
 
-		format, err := reader.Format()
-		check(err)
-
 		for _, sample := range samples {
-			if b.Len() == 0 {
-				b.WriteString(backfiller.Help(trackName))
-			}
+			backfiller.WriteWaveSample(b, startTime, trackName, sample, reader.IntValue(sample, 0), format)
 
-			b.WriteString(
-				fmt.Sprintf(
-					`%s{audio_format="%d",bits_per_sample="%d",block_align="%d",byte_rate="%d",sample_rate="%d"} %d %d%s`,
-					trackName,
-					format.AudioFormat,
-					format.BitsPerSample,
-					format.BlockAlign,
-					format.ByteRate,
-					format.SampleRate,
-					reader.IntValue(sample, 0),
-					startTime.Unix(),
-					"\n",
-				),
-			)
 			startTime = startTime.Add(time.Duration(scrapeInterval) * time.Second)
 		}
 	}
-	b.WriteString("# EOF")
+	backfiller.WriteEnd(b)
 	f, err := os.Create(trackName)
 	check(err)
 	_, err = b.WriteTo(f)

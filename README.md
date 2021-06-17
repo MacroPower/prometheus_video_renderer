@@ -63,25 +63,22 @@ go get -u github.com/MacroPower/prometheus_video_renderer/cmd/prometheus_video_r
    - `ffmpeg -i 'out%06d.png' -vf 'crop=in_w:in_h-1:0:1,pad=iw+0:ih+1:0:1:#FFFFFF@1,format=rgb24' -y 'out%06d.png'`
    - `ffmpeg -i 'out%06d.png' -vf 'crop=in_w:in_h-1:0:-1,pad=iw+0:ih+1:0:-1:#FFFFFF@1,format=rgb24' -y 'out%06d.png'`
 1. Run `prometheus_video_renderer` to generate metrics. (See below for usage.)
+   - To also include audio, you must pass a WAV file with a matching sample rate to `--write-wav`
+   - You can match the sample rate with `sox in.wav -r 99 out.wav dither`, where 99 is the number of samples per frame multiplied by fps.
 1. Loop over generated metrics and send them to `promtool tsdb create-blocks-from openmetrics`
    - Helper script [here](scripts/load.ps1)
 1. Run `docker compose up`
-   - If you want to improve Grafana render speed, increase `RENDERING_CLUSTERING_MAX_CONCURRENCY`.
+   - If you want to improve Grafana render speed (at the cost of additional cpu/memory), increase `RENDERING_CLUSTERING_MAX_CONCURRENCY`.
 1. Optionally, wait for Prometheus to compact. This will help prevent OOMs, timeouts and such.
 1. Record all frames from the Prometheus or Grafana UI.
    - If you're using Prometheus, it's fast enough that you can use AHK. (Mediocre example in the scripts directory.)
    - If you're using Grafana, you will probably want to use [grafana-image-renderer-cli](https://github.com/MacroPower/grafana-image-renderer-sdk-go). (See below for details.)
-1. `cd` to wherever you stored your frames and generate the video file. Examples:
-   - Fast output:
-     `ffmpeg -framerate 30 -i '%06d.png' -c:v libx264 -pix_fmt yuv420p out.mp4`
-   - High quality output:
-     `ffmpeg -framerate 30 -i '%06d.png' -c:v libx264rgb -pix_fmt rgb24 -preset veryslow -crf 0 -qp 0 out.mp4`
-   - Merge with wav:
-     `ffmpeg -framerate 30 -i '%06d.png' -i input.wav -c:v copy -c:a aac -c:v libx264rgb -pix_fmt rgb24 out.mp4`
-   - Merge with audio from original video:
-     `ffmpeg -framerate 30 -i '%06d.png' -i input.mp4 -c copy -map 0:0 -map 1:1 -c:v libx264rgb -pix_fmt rgb24 out.mp4`
-   - Upscale:
-     `ffmpeg -framerate 30 -i '%06d.png' -c:v libx264rgb -pix_fmt rgb24 -vf scale=2560:2200:flags=neighbor out.mp4`
+1. `cd` to wherever you stored your frames and generate the video file with `ffmpeg -framerate 30 -i '%06d.png'` + any of the following:
+   - Fast output: `-c:v libx264 -pix_fmt yuv420p out.mp4`
+   - High quality output: `-c:v libx264rgb -pix_fmt rgb24 -preset veryslow -crf 0 -qp 0 out.mp4`
+   - Merge with wav: `-i input.wav -c:v copy -c:a aac -c:v libx264rgb -pix_fmt rgb24 out.mp4`
+   - Merge with audio from original video: `-i input.mp4 -c copy -map 0:0 -map 1:1 -c:v libx264rgb -pix_fmt rgb24 out.mp4`
+   - Upscale: `-c:v libx264rgb -pix_fmt rgb24 -vf scale=2560:2200:flags=neighbor out.mp4`
 
 ```text
 $ prometheus_video_renderer --help
@@ -105,6 +102,8 @@ Usage of prometheus_video_renderer:
         The frequency at which new samples are written (default 1)
   -start-time int
         The starting timestamp (Unix MS) of the render
+  -write-wav string
+        Optional .WAV file to write alongside video
 ```
 
 If you intend to use Grafana, I highly recommend getting my
@@ -118,7 +117,7 @@ easier.
 ```text
 $ grafana-image-renderer-cli sequence \
     --api-url=http://localhost:3000 \
-    --api-key-or-basic-auth="admin:admin" \
+    --api-key-or-basic-auth=admin:admin \
     --dashboard=pvr-dash-8 \
     --start-time=1256428800000 \
     --frame-interval=5m \
