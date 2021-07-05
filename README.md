@@ -22,7 +22,7 @@ The RGB mode creates a metric and sets a brightness label matching an override f
 
 This is made with 256 unique overrides.
 
-Example coming soon.
+![grayscale-preview](docs/img/demo/grayscale.png)
 
 ### RGB
 
