@@ -1,8 +1,8 @@
 # prometheus_video_renderer
 
-Plays videos using [Prometheus](https://prometheus.io/) and [Grafana](https://grafana.com/), e.g. [Bad Apple](https://www.youtube.com/watch?v=ApJxFprSTqA).
+Encode media into [Prometheus](https://prometheus.io/) metrics, display/render through the Prometheus UI or [Grafana](https://grafana.com/).
 
-![grafana](docs/img/rgb_grafana.png)
+Works with: PNG, WAV, and PNG sequences (aka Video)!
 
 ## Modes
 
@@ -34,13 +34,13 @@ Example: https://www.youtube.com/watch?v=aLvh0oId3Go
 
 ## Audio
 
-You can store and stream WAVs using prometheus_jukebox.
+You can store and stream wave files using prometheus_jukebox.
 
 Example: https://www.youtube.com/watch?v=psk20qGVF10
 
 ## Inspiration
 
-A while back I thought [this blog post](https://giedrius.blog/2019/09/21/is-it-a-good-idea-to-use-prometheus-for-storing-ascii-paintings/) and the corresponding [source code](https://github.com/GiedriusS/prometheuspainter) were kind of fun. After seeing some of [kevinjycui](https://github.com/kevinjycui/bad-apple)'s bad apple videos I thought combining these two ideas could be an interesting (and hilariously terrible) idea.
+A while back I thought [giedrius's blog post on storing ascii art in Prometheus](https://giedrius.blog/2019/09/21/is-it-a-good-idea-to-use-prometheus-for-storing-ascii-paintings/) and the corresponding [source code](https://github.com/GiedriusS/prometheuspainter) were really fun. After seeing some of [kevinjycui](https://github.com/kevinjycui/bad-apple)'s bad apple videos I thought combining these two ideas could be an interesting (and hilariously terrible) idea!
 
 ## Installation / Usage
 
