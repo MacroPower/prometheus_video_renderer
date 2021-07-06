@@ -30,6 +30,8 @@ The RGB mode creates offset metrics for red, green, and blue, and sets a brightn
 
 This is 22-bit color, made with 640 unique overrides.
 
+![rgb-preview](docs/img/demo/rgb.gif)
+
 Example: https://www.youtube.com/watch?v=aLvh0oId3Go
 
 ## Audio
