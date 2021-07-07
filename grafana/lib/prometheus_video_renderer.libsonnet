@@ -1,10 +1,7 @@
 local grafana = import 'github.com/grafana/grafonnet-lib/grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
-local row = grafana.row;
 local graphPanel = grafana.graphPanel;
 local prometheus = grafana.prometheus;
-local template = grafana.template;
-
 local videoHeight = 100;
 
 local videoPanel =
