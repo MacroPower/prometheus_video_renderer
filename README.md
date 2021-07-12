@@ -18,17 +18,13 @@ Example: https://www.youtube.com/watch?v=ApJxFprSTqA
 
 ### Grayscale
 
-The RGB mode creates a metric and sets a brightness label matching an override for each unique brightness.
-
-This is made with 256 unique overrides.
+The grayscale mode creates a metric and sets a brightness label matching an override for each unique brightness.
 
 ![grayscale-preview](docs/img/demo/grayscale.png)
 
 ### RGB
 
 The RGB mode creates offset metrics for red, green, and blue, and sets a brightness label matching an override for each unique color/brightness.
-
-This is 22-bit color, made with 640 unique overrides.
 
 ![rgb-preview](docs/img/demo/rgb.gif)
 
