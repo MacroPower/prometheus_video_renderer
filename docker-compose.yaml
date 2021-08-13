@@ -15,6 +15,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yaml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=20y'
+      - '--storage.tsdb.allow-overlapping-blocks'
       - '--query.lookback-delta=1s'
     networks:
       - prometheus-video-renderer
